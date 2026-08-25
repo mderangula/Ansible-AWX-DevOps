@@ -1,3 +1,7 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# defaults file for roles/linux_identity
+linux_identity_user: ansiblelab
+linux_identity_group: linux_automation
+linux_identity_comment: Ansible automation lab account
+linux_identity_home: /home/ansiblelab
+linux_identity_shell: /bin/bash
+linux_identity_workspace: /opt/automation-lab

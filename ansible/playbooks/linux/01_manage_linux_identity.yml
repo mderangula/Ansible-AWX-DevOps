@@ -1,0 +1,8 @@
+---
+- name: Manage Linux automation identity
+  hosts: Linux_Servers
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: linux_identity

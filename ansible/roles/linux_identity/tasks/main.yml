@@ -1,3 +1,23 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# tasks file for roles/linux_identity
+- name: Ensure automation group exists
+  ansible.builtin.group:
+    name: "{{ linux_identity_group }}"
+    state: present
+
+- name: Ensure automation user exists
+  ansible.builtin.user:
+    name: "{{ linux_identity_user }}"
+    group: "{{ linux_identity_group }}"
+    comment: "{{ linux_identity_comment }}"
+    home: "{{ linux_identity_home }}"
+    shell: "{{ linux_identity_shell }}"
+    create_home: true
+    state: present
+
+- name: Ensure automation workspace exists
+  ansible.builtin.file:
+    path: "{{ linux_identity_workspace }}"
+    state: directory
+    owner: "{{ linux_identity_user }}"
+    group: "{{ linux_identity_group }}"
+    mode: "2775"

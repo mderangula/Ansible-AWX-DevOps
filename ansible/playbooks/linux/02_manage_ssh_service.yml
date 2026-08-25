@@ -1,0 +1,36 @@
+---
+- name: Validate and manage the SSH service
+  hosts: Linux_Servers
+  gather_facts: true
+  become: true
+
+  vars:
+    ssh_service_by_family:
+      RedHat: sshd
+      Debian: ssh
+
+  tasks:
+    - name: Select the distribution-specific SSH service
+      ansible.builtin.set_fact:
+        ssh_service_name: >-
+          {{ ssh_service_by_family[ansible_facts.os_family] }}
+
+    - name: Ensure SSH service is enabled and running
+      ansible.builtin.service:
+        name: "{{ ssh_service_name }}"
+        state: started
+        enabled: true
+
+    - name: Gather service information
+      ansible.builtin.service_facts:
+
+    - name: Validate SSH service state
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services[ssh_service_name + '.service'].state == 'running'
+        fail_msg: >-
+          {{ ssh_service_name }} is not running on
+          {{ inventory_hostname }}
+        success_msg: >-
+          {{ ssh_service_name }} is running on
+          {{ inventory_hostname }}

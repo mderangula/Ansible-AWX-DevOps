@@ -1,0 +1,77 @@
+---
+- name: Validate Linux network configuration
+  hosts: Linux_Servers
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Validate a default IPv4 address was discovered
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.default_ipv4.address is defined
+        fail_msg: >-
+          No default IPv4 address was discovered on
+          {{ inventory_hostname }}
+        success_msg: >-
+          Default address on {{ inventory_hostname }}:
+          {{ ansible_facts.default_ipv4.address }}
+
+    - name: Display interface addresses
+      ansible.builtin.command:
+        argv:
+          - ip
+          - -brief
+          - address
+      register: interface_addresses
+      changed_when: false
+
+    - name: Display routing table
+      ansible.builtin.command:
+        argv:
+          - ip
+          - route
+      register: routing_table
+      changed_when: false
+
+    - name: Resolve GitHub using system name services
+      ansible.builtin.command:
+        argv:
+          - getent
+          - hosts
+          - github.com
+      register: dns_check
+      changed_when: false
+
+    - name: Validate outbound HTTPS connectivity
+      ansible.builtin.wait_for:
+        host: github.com
+        port: 443
+        timeout: 10
+
+    - name: Display network results
+      ansible.builtin.debug:
+        msg:
+          - "{{ interface_addresses.stdout_lines }}"
+          - "{{ routing_table.stdout_lines }}"
+          - "DNS result: {{ dns_check.stdout }}"
+          - "github.com:443 is reachable"
+
+    - name: Check firewalld state on RHEL
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --state
+      register: firewalld_state
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.os_family == "RedHat"
+
+    - name: Check UFW state on Ubuntu
+      ansible.builtin.command:
+        argv:
+          - ufw
+          - status
+      register: ufw_state
+      changed_when: false
+      failed_when: false
+      when: ansible_facts.os_family == "Debian"

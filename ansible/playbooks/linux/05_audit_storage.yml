@@ -1,0 +1,67 @@
+---
+- name: Audit Linux storage
+  hosts: Linux_Servers
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Display mounted filesystem facts
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.mount }}:
+          size={{ item.size_total | human_readable }},
+          available={{ item.size_available | human_readable }},
+          filesystem={{ item.fstype }}
+      loop: "{{ ansible_facts.mounts }}"
+      loop_control:
+        label: "{{ item.mount }}"
+
+    - name: Check block-device layout
+      ansible.builtin.command:
+        argv:
+          - lsblk
+          - -o
+          - NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
+      register: block_devices
+      changed_when: false
+
+    - name: Check filesystem utilization
+      ansible.builtin.command:
+        argv:
+          - df
+          - -hT
+      register: filesystem_usage
+      changed_when: false
+
+    - name: Check inode utilization
+      ansible.builtin.command:
+        argv:
+          - df
+          - -ih
+      register: inode_usage
+      changed_when: false
+
+    - name: Display storage results
+      ansible.builtin.debug:
+        msg:
+          - "{{ block_devices.stdout_lines }}"
+          - "{{ filesystem_usage.stdout_lines }}"
+          - "{{ inode_usage.stdout_lines }}"
+
+    - name: Identify filesystems above warning threshold
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: {{ item.mount }} has less than 20 percent
+          available capacity
+      vars:
+        available_percentage: >-
+          {{
+            (item.size_available | float /
+             item.size_total | float) * 100
+          }}
+      when:
+        - item.size_total | int > 0
+        - available_percentage | float < 20
+      loop: "{{ ansible_facts.mounts }}"
+      loop_control:
+        label: "{{ item.mount }}"

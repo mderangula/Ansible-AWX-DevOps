@@ -1,0 +1,49 @@
+---
+- name: Manage baseline Linux packages
+  hosts: Linux_Servers
+  gather_facts: true
+  become: true
+
+  vars:
+    baseline_packages:
+      - curl
+      - git
+
+  tasks:
+    - name: Ensure baseline packages are installed
+      ansible.builtin.package:
+        name: "{{ baseline_packages }}"
+        state: present
+
+    - name: Check available updates on RHEL systems
+      ansible.builtin.command:
+        argv:
+          - dnf
+          - -q
+          - check-update
+      register: rhel_update_check
+      changed_when: false
+      failed_when: rhel_update_check.rc not in [0, 100]
+      when: ansible_facts.os_family == "RedHat"
+
+    - name: Simulate available upgrades on Ubuntu systems
+      ansible.builtin.command:
+        argv:
+          - apt-get
+          - -s
+          - upgrade
+      register: ubuntu_update_check
+      changed_when: false
+      when: ansible_facts.os_family == "Debian"
+
+    - name: Display RHEL update summary
+      ansible.builtin.debug:
+        msg: >-
+          RHEL update check return code:
+          {{ rhel_update_check.rc }}
+      when: ansible_facts.os_family == "RedHat"
+
+    - name: Display Ubuntu upgrade simulation
+      ansible.builtin.debug:
+        var: ubuntu_update_check.stdout_lines
+      when: ansible_facts.os_family == "Debian"

@@ -1,0 +1,56 @@
+---
+- name: Validate Linux managed nodes
+  hosts: Linux_Servers
+  gather_facts: true
+  become: false
+
+  tasks:
+    - name: Validate supported operating-system family
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.os_family in ["RedHat", "Debian"]
+        fail_msg: >-
+          Unsupported operating-system family:
+          {{ ansible_facts.os_family }}
+        success_msg: >-
+          Supported system:
+          {{ ansible_facts.distribution }}
+          {{ ansible_facts.distribution_version }}
+
+    - name: Display managed-node information
+      ansible.builtin.debug:
+        msg:
+          - "Inventory host: {{ inventory_hostname }}"
+          - "System hostname: {{ ansible_facts.hostname }}"
+          - "Distribution: {{ ansible_facts.distribution }}"
+          - "Version: {{ ansible_facts.distribution_version }}"
+          - "OS family: {{ ansible_facts.os_family }}"
+          - "Kernel: {{ ansible_facts.kernel }}"
+          - "Architecture: {{ ansible_facts.architecture }}"
+          - "Python: {{ ansible_facts.python_version }}"
+          - "Default IPv4: {{ ansible_facts.default_ipv4.address | default('Not detected') }}"
+
+    - name: Check root filesystem utilization
+      ansible.builtin.command:
+        argv:
+          - df
+          - -h
+          - /
+      register: root_filesystem
+      changed_when: false
+
+    - name: Display root filesystem utilization
+      ansible.builtin.debug:
+        var: root_filesystem.stdout_lines
+
+    - name: Check system uptime
+      ansible.builtin.command:
+        argv:
+          - uptime
+          - -p
+      register: system_uptime
+      changed_when: false
+
+    - name: Display system uptime
+      ansible.builtin.debug:
+        var: system_uptime.stdout

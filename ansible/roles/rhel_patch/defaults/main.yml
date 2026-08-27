@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/rhel_patch
+patch_mount_point: /
+minimum_free_space_mb: 2048
+minimum_uptime_seconds: 300
+
+patch_security_only: false
+reboot_required: false
+
+patch_service_name: nginx
+patch_healthcheck_url: "http://127.0.0.1/"
+patch_expected_status: 200
+
+patch_reboot_timeout: 900
+patch_healthcheck_retries: 5
+patch_healthcheck_delay: 10
+
+patch_notification_recipient: "Linux Operations"

@@ -1,0 +1,8 @@
+---
+- name: Notify operations about patching failure
+  ansible.builtin.debug:
+    msg:
+      notification_type: "PATCH_FAILURE"
+      recipient: "{{ patch_notification_recipient }}"
+      host: "{{ inventory_hostname }}"
+      details: "{{ patch_failure_message }}"

@@ -1,0 +1,9 @@
+---
+- name: Patch RHEL servers safely
+  hosts: Linux_Servers
+  become: true
+  gather_facts: false
+  serial: 1
+
+  roles:
+    - role: rhel_patch

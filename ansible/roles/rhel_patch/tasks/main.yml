@@ -1,0 +1,133 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/rhel_patch
+- name: Collect system facts
+  ansible.builtin.setup:
+    gather_subset:
+      - min
+      - mounts
+
+- name: Locate the filesystem being checked
+  ansible.builtin.set_fact:
+    patch_mount: >-
+      {{
+        ansible_mounts
+        | selectattr('mount', 'equalto', patch_mount_point)
+        | first
+        | default({})
+      }}
+
+- name: Display pre-patch information
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      uptime_seconds: "{{ ansible_uptime_seconds }}"
+      mount_point: "{{ patch_mount_point }}"
+      free_space_mb: >-
+        {{
+          (patch_mount.size_available | default(0) | int / 1024 / 1024)
+          | round(0)
+        }}
+
+- name: Validate disk space and uptime
+  ansible.builtin.assert:
+    that:
+      - patch_mount | length > 0
+      - (patch_mount.size_available | int / 1024 / 1024) >= minimum_free_space_mb
+      - ansible_uptime_seconds | int >= minimum_uptime_seconds
+    fail_msg: >-
+      Pre-patch validation failed on {{ inventory_hostname }}.
+      Free space={{
+        (patch_mount.size_available | default(0) | int / 1024 / 1024)
+        | round(0)
+      }} MB.
+      Uptime={{ ansible_uptime_seconds }} seconds.
+    success_msg: >-
+      Pre-patch validation passed on {{ inventory_hostname }}.
+
+- name: Patch and validate the RHEL server
+  block:
+    - name: Apply available DNF errata
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+        security: "{{ patch_security_only }}"
+      register: patch_result
+
+    - name: Display patching result
+      ansible.builtin.debug:
+        msg:
+          changed: "{{ patch_result.changed }}"
+          results: "{{ patch_result.results | default([]) }}"
+
+    - name: Reboot when requested and packages changed
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Ansible following patch installation"
+        connect_timeout: 10
+        reboot_timeout: "{{ patch_reboot_timeout }}"
+        pre_reboot_delay: 0
+        post_reboot_delay: 20
+        test_command: uptime
+      when:
+        - reboot_required | bool
+        - patch_result.changed
+
+    - name: Wait for the server to become reachable
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        sleep: 10
+        timeout: "{{ patch_reboot_timeout }}"
+      when:
+        - reboot_required | bool
+        - patch_result.changed
+
+    - name: Ensure the post-patch service is running
+      ansible.builtin.service:
+        name: "{{ patch_service_name }}"
+        state: started
+
+    - name: Validate post-patch application health
+      ansible.builtin.uri:
+        url: "{{ patch_healthcheck_url }}"
+        method: GET
+        status_code: "{{ patch_expected_status }}"
+        return_content: false
+      register: patch_healthcheck
+      retries: "{{ patch_healthcheck_retries }}"
+      delay: "{{ patch_healthcheck_delay }}"
+      until:
+        - patch_healthcheck.status is defined
+        - patch_healthcheck.status == patch_expected_status
+
+    - name: Display successful health-check result
+      ansible.builtin.debug:
+        msg: >-
+          Post-patch health check passed on {{ inventory_hostname }}.
+          HTTP status={{ patch_healthcheck.status }}.
+
+  rescue:
+    - name: Record patch workflow failure
+      ansible.builtin.set_fact:
+        patch_failure_message: >-
+          Patch workflow failed on {{ inventory_hostname }}.
+          Failed task={{
+            ansible_failed_task.name | default('Unknown task')
+          }}.
+          Reason={{
+            ansible_failed_result.msg | default('No error message returned')
+          }}.
+
+    - name: Execute notification task
+      ansible.builtin.include_tasks: notify_failure.yml
+
+    - name: Fail gracefully after notification
+      ansible.builtin.fail:
+        msg: "{{ patch_failure_message }}"
+
+  always:
+    - name: Record workflow completion
+      ansible.builtin.debug:
+        msg: >-
+          Patch workflow finished on {{ inventory_hostname }}.
+          Review the AAP job output for the final status.

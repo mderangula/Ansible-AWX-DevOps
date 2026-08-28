@@ -19,7 +19,7 @@ spec:
           p, proj:portfolio:github-actions, logs, get,
           portfolio/hello-world, allow
   sourceRepos:
-    - https://github.com/mderangula/ansible-automation-showcase.git
+    - https://github.com/mderangula/Ansible-AWX-DevOps.git
   destinations:
     - namespace: hello-world
       server: https://kubernetes.default.svc

@@ -1,4 +1,4 @@
-# Ansible Automation Showcase
+# Ansible AWX DevOps
 
 A practical lab repository for learning infrastructure automation with Ansible,
 AWX, Docker, Terraform, Kubernetes, Argo CD, and GitHub Actions.

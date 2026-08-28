@@ -8,7 +8,7 @@ metadata:
 spec:
   project: portfolio
   source:
-    repoURL: https://github.com/mderangula/ansible-automation-showcase.git
+    repoURL: https://github.com/mderangula/Ansible-AWX-DevOps.git
     targetRevision: main
     path: gitops/hello-world
   destination:

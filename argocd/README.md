@@ -59,7 +59,7 @@ argocd proj role create-token portfolio github-actions \
   --token-only | \
 gh secret set ARGOCD_AUTH_TOKEN \
   --env production \
-  --repo mderangula/ansible-automation-showcase
+  --repo mderangula/Ansible-AWX-DevOps
 ```
 
 Rotate this 30-day token before it expires. After confirming the replacement
@@ -91,7 +91,7 @@ Set the server without putting a credential in shell history:
 printf '%s' 'argocd.example.com:443' | \
 gh secret set ARGOCD_SERVER \
   --env production \
-  --repo mderangula/ansible-automation-showcase
+  --repo mderangula/Ansible-AWX-DevOps
 ```
 
 Confirm that the names exist; GitHub will not display their values:
@@ -99,7 +99,7 @@ Confirm that the names exist; GitHub will not display their values:
 ```bash
 gh secret list \
   --env production \
-  --repo mderangula/ansible-automation-showcase
+  --repo mderangula/Ansible-AWX-DevOps
 ```
 
 The `GitOps Delivery` workflow validates changes on pull requests. On `main`,
